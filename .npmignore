@@ -1,8 +1,9 @@
 src/
 test/
 .husky/
+.github/
 
-.eslintrc.js
-.prettierrc.js
-jest.config.test
+.eslintrc.json
+.prettierrc.json
+jest.config.ts
 tsconfig.json
