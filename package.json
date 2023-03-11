@@ -9,8 +9,7 @@
     "lint:fix": "eslint src/**/*.ts --quiet --fix",
     "test": "jest -c jest.config.ts",
     "test:coverage": "jest -c jest.config.ts --verbose --collectCoverage",
-    "typecheck": "tsc --noEmit",
-    "prepare": "husky install"
+    "typecheck": "tsc --noEmit"
   },
   "peerDependencies": {
     "zod": "^3.21.4"
@@ -43,7 +42,13 @@
     "type": "git",
     "url": "git+https://github.com/teunmooij/typescript-module-template.git"
   },
-  "keywords": [],
+  "keywords": [
+    "zod",
+    "schema",
+    "validation",
+    "discriminated union",
+    "union"
+  ],
   "author": "Teun Mooij",
   "license": "MIT",
   "bugs": {

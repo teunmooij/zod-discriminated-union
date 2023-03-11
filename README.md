@@ -1,19 +1,44 @@
-# [module-name]
+# zod.discriminatedunion
 
-Short description of the module
+[Zod](https://zod.dev) DiscriminatedUnion type.
+
+Zod plans to deprecated the very useful `DiscriminatedUnion` type and will not continue improving it with some much-needed enhancements. We will.
 
 ## Installation
 
 ```shell
-$ npm install <module-name>
+$ npm install zod.discriminatedunion
+```
+
+`zod.discriminatedunion` requires `zod` as a peer dependency.
+
+```shell
+$ npm install zod
 ```
 
 ## Usage
 
-Explanation of how the module can be used
+A discriminated union is a union of object schemas that all share a particular key.
+
+```ts
+type MyUnion = { status: 'success'; data: string } | { status: 'failed'; error: Error };
+```
+
+Such unions can be represented with the `z.discriminatedUnion` method. This enables faster evaluation, because Zod can check the _discriminator key_ (`status` in the example above) to determine which schema should be used to parse the input. This makes parsing more efficient and lets Zod report friendlier errors.
+
+With the basic union method, the input is tested against each of the provided "options", and in the case of invalidity, issues for all the "options" are shown in the zod error. On the other hand, the discriminated union allows for selecting just one of the "options", testing against it, and showing only the issues related to this "option".
+
+```ts
+const myUnion = z.discriminatedUnion('status', [
+  z.object({ status: z.literal('success'), data: z.string() }),
+  z.object({ status: z.literal('failed'), error: z.instanceof(Error) }),
+]);
+
+myUnion.parse({ status: 'success', data: 'yippie ki yay' });
+```
 
 ## Version history
 
-### v1.0
+### 0.0.1
 
-- Initial version
+- Baseline, similar to `z.discriminatedUnion` in [Zod](https://zod.dev) version 3.21.4
