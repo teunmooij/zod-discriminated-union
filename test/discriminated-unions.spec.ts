@@ -1,5 +1,5 @@
-import y from '../src';
-import z, { util } from 'zod';
+import y, { ZodDiscriminatedUnion } from '../src';
+import z, { util, ZodObject } from 'zod';
 import { expectShape } from './testUtil';
 
 test('valid', () => {
@@ -606,6 +606,10 @@ describe('object schema functions', () => {
     const schema = y.discriminatedUnion('type', [
       z.object({ type: z.literal('a'), foo: z.string() }).passthrough(),
       z.object({ type: z.literal('b'), baz: z.string() }).passthrough(),
+      y.discriminatedUnion('sub', [
+        z.object({ type: z.literal('c'), sub: z.literal('a'), foo: z.string() }).passthrough(),
+        z.object({ type: z.literal('c'), sub: z.literal('b'), baz: z.string() }).passthrough(),
+      ]),
     ]);
 
     const strictSchema = schema.strict();
@@ -618,10 +622,22 @@ describe('object schema functions', () => {
       error: expect.objectContaining({ issues: [expect.objectContaining({ code: 'unrecognized_keys' })] }),
     });
 
-    expectShape<{ type: 'a'; foo: string } | { type: 'b'; baz: string }>().forSchema(strictSchema);
-    expect(strictSchema.options).toHaveLength(2);
+    expectShape<
+      | { type: 'a'; foo: string }
+      | { type: 'b'; baz: string }
+      | { type: 'c'; sub: 'a'; foo: string }
+      | { type: 'c'; sub: 'b'; baz: string }
+    >().forSchema(strictSchema);
+    expect(strictSchema.options).toHaveLength(3);
     strictSchema.options.forEach(option => {
-      expect(option._def.unknownKeys).toEqual('strict');
+      if (option instanceof ZodDiscriminatedUnion) {
+        expect(option.options).toHaveLength(2);
+        option.options.forEach(o => {
+          expect(o._def.unknownKeys).toEqual('strict');
+        });
+      } else {
+        expect(option._def.unknownKeys).toEqual('strict');
+      }
     });
   });
 

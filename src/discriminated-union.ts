@@ -122,7 +122,7 @@ export type ZodDiscriminatedUnionOption<Discriminator extends string> =
 
 export interface ZodDiscriminatedUnionDef<
   Discriminator extends string,
-  Options extends ZodDiscriminatedUnionOption<string>[] = ZodDiscriminatedUnionOption<string>[],
+  Options extends ZodDiscriminatedUnionOption<Discriminator>[] = ZodDiscriminatedUnionOption<Discriminator>[],
 > extends ZodTypeDef {
   discriminator: Discriminator;
   options: Options;
@@ -151,7 +151,7 @@ type ZodPickedDiscriminatedUnionOptions<
     [I in keyof Options]: Options[I] extends ZodObject<infer Shape, infer UnknownKeys, infer Catchall, any, any>
       ? ZodObject<Pick<Shape, Extract<keyof Shape, K> | Discriminator>, UnknownKeys, Catchall>
       : Options[I] extends ZodDiscriminatedUnion<infer D, infer O>
-      ? ZodPickedDiscriminatedUnionOptions<D, O, K>
+      ? ZodDiscriminatedUnion<D, ZodPickedDiscriminatedUnionOptions<D, O, K>>
       : never;
   },
   Discriminator
@@ -165,7 +165,7 @@ type ZodUnknownKeysDiscriminatedUnionOptions<
   [I in keyof Options]: Options[I] extends ZodObject<infer Shape, any, infer Catchall, any, any>
     ? ZodObject<Shape, UnknownKeys, Catchall>
     : Options[I] extends ZodDiscriminatedUnion<infer D, infer O>
-    ? ZodUnknownKeysDiscriminatedUnionOptions<D, O, UnknownKeys>
+    ? ZodDiscriminatedUnion<D, ZodUnknownKeysDiscriminatedUnionOptions<D, O, UnknownKeys>>
     : never;
 };
 
@@ -178,7 +178,7 @@ type ZodCatchallDiscriminatedUnionOptions<
     [I in keyof Options]: Options[I] extends ZodObject<infer Shape, infer UnknownKeys, any, any, any>
       ? ZodObject<Shape, UnknownKeys, Catchall>
       : Options[I] extends ZodDiscriminatedUnion<infer D, infer O>
-      ? ZodCatchallDiscriminatedUnionOptions<D, O, Catchall>
+      ? ZodDiscriminatedUnion<D, ZodCatchallDiscriminatedUnionOptions<D, O, Catchall>>
       : never;
   },
   Discriminator
@@ -199,7 +199,7 @@ type ZodPartialDiscriminatedUnionOptions<
           Catchall
         >
       : Options[I] extends ZodDiscriminatedUnion<infer D, infer O>
-      ? ZodPartialDiscriminatedUnionOptions<D, O, Exclude<Keys, Discriminator>>
+      ? ZodDiscriminatedUnion<D, ZodPartialDiscriminatedUnionOptions<D, O, Exclude<Keys, Discriminator>>>
       : never;
   },
   Discriminator
@@ -220,7 +220,7 @@ type ZodRequiredDiscriminatedUnionOptions<
           Catchall
         >
       : Options[I] extends ZodDiscriminatedUnion<infer D, infer O>
-      ? ZodRequiredDiscriminatedUnionOptions<D, O, Keys>
+      ? ZodDiscriminatedUnion<D, ZodRequiredDiscriminatedUnionOptions<D, O, Keys>>
       : never;
   },
   Discriminator
@@ -241,7 +241,7 @@ type ZodDeepPartialDiscriminatedUnionOptions<
           Catchall
         >
       : Options[I] extends ZodDiscriminatedUnion<infer D, infer O>
-      ? ZodDeepPartialDiscriminatedUnionOptions<D, O, ParentDiscriminators | Discriminator>
+      ? ZodDiscriminatedUnion<D, ZodDeepPartialDiscriminatedUnionOptions<D, O, ParentDiscriminators | Discriminator>>
       : never;
   },
   Discriminator
