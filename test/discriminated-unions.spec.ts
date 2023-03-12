@@ -1,5 +1,5 @@
 import y from '../src';
-import z from 'zod';
+import z, { util } from 'zod';
 
 test('valid', () => {
   expect(
@@ -58,6 +58,53 @@ test('valid - discriminator value of various primitive types', () => {
     type: undefined,
     val: 9,
   });
+});
+
+test('valid - various zod validator discriminators', () => {
+  const schema = y.discriminatedUnion('type', [
+    z.object({ type: z.undefined(), val: z.literal(1) }),
+    z.object({ type: z.null(), val: z.literal(2) }),
+    z.object({ type: z.enum(['a', 'b', 'c']), val: z.literal(3) }),
+  ]);
+
+  expect(schema.parse({ type: undefined, val: 1 })).toEqual({
+    type: undefined,
+    val: 1,
+  });
+  expect(schema.parse({ type: null, val: 2 })).toEqual({
+    type: null,
+    val: 2,
+  });
+  expect(schema.parse({ type: 'c', val: 3 })).toEqual({
+    type: 'c',
+    val: 3,
+  });
+});
+
+test('valid - wrapped optional discriminator value ', () => {
+  const schema = y.discriminatedUnion('type', [
+    z.object({ type: z.literal('1').optional(), val: z.literal(1) }),
+    z.object({ type: z.literal(1), val: z.literal(2) }),
+  ]);
+
+  expect(schema.parse({ type: '1', val: 1 })).toEqual({ type: '1', val: 1 });
+  expect(schema.parse({ type: undefined, val: 1 })).toEqual({
+    type: undefined,
+    val: 1,
+  });
+  expect(schema.parse({ type: 1, val: 2 })).toEqual({ type: 1, val: 2 });
+});
+
+test('invalid - collision with multiple undefined discriminators', () => {
+  try {
+    y.discriminatedUnion('type', [
+      z.object({ type: z.literal('1').optional(), val: z.literal(1) }),
+      z.object({ type: z.literal(undefined), val: z.literal(2) }),
+    ]);
+    throw new Error();
+  } catch (e: any) {
+    expect(e.message.includes('has duplicate value')).toEqual(true);
+  }
 });
 
 test('invalid - null', () => {
@@ -137,6 +184,237 @@ test('wrong schema - duplicate discriminator values', () => {
     throw new Error();
   } catch (e: any) {
     expect(e.message.includes('has duplicate value')).toEqual(true);
+  }
+});
+
+test('valid - `DiscriminatedUnion` as a union option', () => {
+  const A = z.object({ type: z.literal('a'), a: z.literal(1) });
+  const B = z.object({ type: z.literal('b'), b: z.literal(2) });
+  const C = z.object({ type: z.literal('c').optional(), c: z.literal(true) });
+  const AorB = y.discriminatedUnion('type', [A, B]);
+  const schema = y.discriminatedUnion('type', [AorB, C]);
+
+  expect(schema.parse({ type: 'a', a: 1 })).toEqual({ type: 'a', a: 1 });
+  expect(schema.parse({ type: 'b', b: 2 })).toEqual({ type: 'b', b: 2 });
+  expect(schema.parse({ type: undefined, c: true })).toEqual({
+    type: undefined,
+    c: true,
+  });
+
+  expect(schema.parse({ type: 'c', c: true })).toEqual({
+    type: 'c',
+    c: true,
+  });
+});
+
+test('valid expected types from inference with another DiscriminatedUnion element', () => {
+  const A = z.object({ type: z.literal('a'), a: z.literal(1) });
+  const B = z.object({ type: z.literal('b'), b: z.literal(2) });
+  const C = z.object({ type: z.literal('c').optional(), c: z.literal(true) });
+  const AorB = y.discriminatedUnion('type', [A, B]);
+  const schema = y.discriminatedUnion('type', [AorB, C]);
+  type schemaType = z.infer<typeof schema>;
+
+  util.assertEqual<schemaType, { type: 'a'; a: 1 } | { type: 'b'; b: 2 } | { type?: 'c' | undefined; c: true }>(true);
+});
+
+test('DU flattens children DiscriminatedUnion elements with same discriminator key', () => {
+  const A = z.object({ type: z.literal('a'), a: z.literal(1) });
+  const B = z.object({ type: z.literal('b'), b: z.literal(2) });
+  const C = z.object({ type: z.literal('c').optional(), c: z.literal(true) });
+  const D = z.object({ type: z.literal('d'), d: z.literal('d') });
+
+  const AorB = y.discriminatedUnion('type', [A, B]);
+  const child = y.discriminatedUnion('type', [AorB, C]);
+  const parent = y.discriminatedUnion('type', [child, D]);
+
+  expect(parent.options.length).toEqual(4);
+});
+
+test('valid - nested disjointed DiscriminatedUnions', () => {
+  const subtype = y.discriminatedUnion('subtype', [
+    z.object({
+      type: z.literal('baz'),
+      subtype: z.literal('able'),
+    }),
+    z.object({
+      type: z.literal('bauble'),
+      subtype: z.literal('beehive'),
+      undertype: z.literal('alpha'),
+    }),
+    z.object({
+      type: z.literal('baz'),
+      subtype: z.literal('baker'),
+    }),
+  ]);
+
+  const schema = y.discriminatedUnion('type', [
+    z.object({
+      type: z.literal('foo'),
+    }),
+    z.object({
+      type: z.literal('bar'),
+    }),
+    subtype,
+  ]);
+
+  const testMaps = [
+    { type: 'baz', subtype: 'able' },
+    { type: 'baz', subtype: 'baker' },
+    { type: 'bauble', subtype: 'beehive', undertype: 'alpha' },
+    { type: 'foo' },
+    { type: 'bar' },
+  ];
+
+  testMaps.map(el => expect(schema.parse(el)).toEqual(el));
+});
+
+test('valid expected types from inference with disjointed nested DiscriminatedUnions', () => {
+  const underDU = y.discriminatedUnion('undertype', [
+    z.object({
+      undertype: z.literal('a'),
+      subtype: z.literal(1),
+      wowee: z.literal(true),
+    }),
+    z.object({
+      undertype: z.literal('b'),
+      subtype: z.literal(1),
+      wowee: z.literal(false),
+    }),
+    z.object({
+      undertype: z.literal('c'),
+      subtype: z.literal(2),
+      extra: z.literal('yes'),
+    }),
+  ]);
+
+  const subDU = y.discriminatedUnion('subtype', [
+    underDU,
+    z.object({
+      subtype: z.literal(9),
+      additional: z.literal('true'),
+    }),
+  ]);
+
+  type schemaType = z.infer<typeof subDU>;
+
+  util.assertEqual<
+    schemaType,
+    | { undertype: 'a'; subtype: 1; wowee: true }
+    | { undertype: 'b'; subtype: 1; wowee: false }
+    | { undertype: 'c'; subtype: 2; extra: 'yes' }
+    | { subtype: 9; additional: 'true' }
+  >(true);
+});
+
+test('invalid - duplicate values for nested disjointed DUs', () => {
+  const underDU = y.discriminatedUnion('undertype', [
+    z.object({
+      undertype: z.literal('a'),
+      subtype: z.literal(9),
+      wowee: z.literal(true),
+    }),
+    z.object({
+      undertype: z.literal('b'),
+      subtype: z.literal(1),
+      wowee: z.literal(false),
+    }),
+    z.object({
+      undertype: z.literal('c'),
+      subtype: z.literal(2),
+      extra: z.literal('yes'),
+    }),
+  ]);
+  try {
+    y.discriminatedUnion('subtype', [
+      underDU,
+      z.object({
+        subtype: z.literal(9),
+        additional: z.literal('true'),
+      }),
+    ]);
+    throw new Error();
+  } catch (e: any) {
+    expect(e.message.includes('has duplicate value `9`')).toEqual(true);
+  }
+});
+
+test('invalid - nested DUs with missing parent discriminator keys', () => {
+  const underDU = y.discriminatedUnion('undertype', [
+    z.object({
+      undertype: z.literal('a'),
+      subtype: z.literal(1),
+      wowee: z.literal(true),
+    }),
+    z.object({
+      undertype: z.literal('b'),
+      subtype: z.literal(1),
+      wowee: z.literal(false),
+      additional: z.literal('true'),
+    }),
+    z.object({
+      undertype: z.literal('c'),
+      subtype: z.literal(2),
+      extra: z.literal('yes'),
+    }),
+  ]);
+
+  const subDU = y.discriminatedUnion('subtype', [
+    underDU,
+    z.object({
+      subtype: z.literal(9),
+      additional: z.literal('false'),
+    }),
+  ]);
+
+  try {
+    y.discriminatedUnion('additional', [
+      subDU,
+      z.object({
+        subtype: z.literal(9),
+        additional: z.literal('true'),
+      }),
+    ]);
+    throw new Error();
+  } catch (e: any) {
+    expect(e.message.includes('value for key `additional` could not be extracted')).toEqual(true);
+  }
+});
+
+test('multiple nested DiscriminatedUnion elements', () => {
+  const NESTING_DEPTH = 20;
+  const elementArray = Array(NESTING_DEPTH)
+    .fill(0)
+    .map((_el, i) => z.object({ type: z.literal(i), [`${i}`]: z.literal(true) }));
+
+  const firstSchema = y.discriminatedUnion('type', [elementArray[0], elementArray[1]]);
+
+  const schema = elementArray
+    .slice(2)
+    .reduce<y.ZodDiscriminatedUnion<'type', any>>((prev, curr) => y.discriminatedUnion('type', [prev, curr]), firstSchema);
+
+  Array(NESTING_DEPTH)
+    .fill(0)
+    .map((_el, i) => ({ type: i, [`${i}`]: true }))
+    .map(el => {
+      expect(schema.parse(el)).toEqual(el);
+    });
+});
+
+test('discriminator not available for nested DiscriminatedUnion', () => {
+  try {
+    const A = z.object({ type: z.literal('a'), a: z.literal(1) });
+    const B = z.object({ type: z.literal('b'), b: z.literal(2) });
+    const AorB = y.discriminatedUnion('type', [A, B]);
+
+    const C = z.object({ foo: z.literal('c'), a: z.literal(3) });
+    const D = z.object({ foo: z.literal('d'), b: z.literal(4) });
+    const CorD = y.discriminatedUnion('foo', [C, D]);
+
+    y.discriminatedUnion('type', [AorB, CorD as any]);
+    throw new Error();
+  } catch (e: any) {
+    expect(e.message.includes('value for key `type` could not be extracted')).toEqual(true);
   }
 });
 

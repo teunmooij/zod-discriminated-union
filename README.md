@@ -39,6 +39,10 @@ myUnion.parse({ status: 'success', data: 'yippie ki yay' });
 
 ## Version history
 
+### 0.1.0
+
+- DiscriminatedUnion as option for a discriminatedUnion
+
 ### 0.0.1
 
 - Baseline, similar to `z.discriminatedUnion` in [Zod](https://zod.dev) version 3.21.4
