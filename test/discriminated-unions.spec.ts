@@ -81,6 +81,34 @@ test('valid - various zod validator discriminators', () => {
   });
 });
 
+test('valid - zod lazy discriminator', () => {
+  const schema = y.discriminatedUnion('type', [
+    z.object({ type: z.lazy(() => z.literal('a')), val: z.literal(1) }),
+    z.object({ type: z.lazy(() => z.literal('b')), val: z.literal(2) }),
+  ]);
+
+  expect(schema.parse({ type: 'b', val: 2 })).toEqual({
+    type: 'b',
+    val: 2,
+  });
+});
+
+test('valid - zod native enum discriminator', () => {
+  enum Fruits {
+    Apple,
+    Banana,
+  }
+  const schema = y.discriminatedUnion('type', [
+    z.object({ type: z.literal('a'), val: z.literal(1) }),
+    z.object({ type: z.nativeEnum(Fruits), val: z.literal(2) }),
+  ]);
+
+  expect(schema.parse({ type: Fruits.Banana, val: 2 })).toEqual({
+    type: Fruits.Banana,
+    val: 2,
+  });
+});
+
 test('valid - wrapped optional discriminator value ', () => {
   const schema = y.discriminatedUnion('type', [
     z.object({ type: z.literal('1').optional(), val: z.literal(1) }),
@@ -487,5 +515,84 @@ test('valid - literals with .default or .preprocess', () => {
   expect(schema.parse({ type: 'foo', a: 'foo' })).toEqual({
     type: 'foo',
     a: 'foo',
+  });
+});
+
+describe('create params tests', () => {
+  it('uses the given errorMap', () => {
+    const schema = y.discriminatedUnion(
+      'type',
+      [z.object({ type: z.literal('a'), a: z.string() }), z.object({ type: z.literal('b'), b: z.string() })],
+      { errorMap: () => ({ message: 'oops' }) },
+    );
+
+    const result = schema.safeParse({ type: 'c' });
+
+    expect(result).toEqual({
+      success: false,
+      error: expect.objectContaining({ issues: [expect.objectContaining({ message: 'oops' })] }),
+    });
+  });
+
+  it('uses the given invalid_union_discriminator', () => {
+    const schema = y.discriminatedUnion(
+      'type',
+      [z.object({ type: z.literal('a'), a: z.string() }), z.object({ type: z.literal('b'), b: z.string() })],
+      { invalid_union_discriminator: 'My error message', invalid_type_error: 'My type error message' },
+    );
+
+    const result = schema.safeParse({ type: undefined });
+
+    expect(result).toEqual({
+      success: false,
+      error: expect.objectContaining({ issues: [expect.objectContaining({ message: 'My error message' })] }),
+    });
+  });
+
+  it('uses the given invalid_type_error', () => {
+    const schema = y.discriminatedUnion(
+      'type',
+      [z.object({ type: z.literal('a'), a: z.string() }), z.object({ type: z.literal('b'), b: z.string() })],
+      { invalid_union_discriminator: 'My error message', invalid_type_error: 'My type error message' },
+    );
+
+    const result = schema.safeParse('not an objet');
+
+    expect(result).toEqual({
+      success: false,
+      error: expect.objectContaining({ issues: [expect.objectContaining({ message: 'My type error message' })] }),
+    });
+  });
+
+  it('does not allow "invalid_union_discriminator" in conjunction with "errprMap"', () => {
+    expect.assertions(1);
+
+    try {
+      y.discriminatedUnion(
+        'type',
+        [z.object({ type: z.literal('a'), a: z.string() }), z.object({ type: z.literal('b'), b: z.string() })],
+        { errorMap: () => ({ message: 'oops' }), invalid_union_discriminator: 'oopsie' },
+      );
+    } catch (e: any) {
+      expect(e.message).toEqual(
+        `Can't use "invalid_type_error" or "invalid_union_discriminator" in conjunction with custom error map.`,
+      );
+    }
+  });
+
+  it('does not allow "invalid_union_discriminator" in conjunction with "errprMap"', () => {
+    expect.assertions(1);
+
+    try {
+      y.discriminatedUnion(
+        'type',
+        [z.object({ type: z.literal('a'), a: z.string() }), z.object({ type: z.literal('b'), b: z.string() })],
+        { errorMap: () => ({ message: 'oops' }), invalid_type_error: 'oopsie' },
+      );
+    } catch (e: any) {
+      expect(e.message).toEqual(
+        `Can't use "invalid_type_error" or "invalid_union_discriminator" in conjunction with custom error map.`,
+      );
+    }
   });
 });
