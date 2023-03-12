@@ -1,4 +1,4 @@
-[![codecov](https://codecov.io/gh/teunmooij/jest-nest/branch/main/graph/badge.svg?token=RD1WJQ36WN)](https://codecov.io/gh/teunmooij/jest-nest)
+[![codecov](https://codecov.io/gh/teunmooij/zod-discriminated-union/branch/main/graph/badge.svg?token=trryg8OpjZ)](https://codecov.io/gh/teunmooij/zod-discriminated-union)
 [![snyk](https://snyk.io/test/github/teunmooij/zod.discriminatedunion/badge.svg)](https://snyk.io/test/github/teunmooij/zod.discriminatedunion)
 [![npm version](https://badge.fury.io/js/zod.discriminatedunion.svg)](https://badge.fury.io/js/zod.discriminatedunion)
 

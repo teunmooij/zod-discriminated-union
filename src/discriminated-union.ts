@@ -7,7 +7,7 @@ import {
   ParseReturnType,
   Primitive,
   ProcessedCreateParams,
-  RawCreateParams,
+  RawCreateParams as ZodRawCreateParams,
   ZodDefault,
   ZodEffects,
   ZodEnum,
@@ -27,19 +27,28 @@ import {
   ZodUndefined,
 } from 'zod';
 
-function processCreateParams(params: RawCreateParams): ProcessedCreateParams {
+type Defined<T> = T extends undefined ? never : T;
+
+export type RawCreateParams = Omit<Defined<ZodRawCreateParams>, 'required_error'> & {
+  invalid_union_discriminator?: string;
+};
+
+function processCreateParams(params: RawCreateParams | undefined): ProcessedCreateParams {
   if (!params) return {};
-  const { errorMap, invalid_type_error, required_error, description } = params;
-  if (errorMap && (invalid_type_error || required_error)) {
-    throw new Error(`Can't use "invalid_type_error" or "required_error" in conjunction with custom error map.`);
+  const { errorMap, invalid_type_error, invalid_union_discriminator, description } = params;
+  if (errorMap && (invalid_type_error || invalid_union_discriminator)) {
+    throw new Error(`Can't use "invalid_type_error" or "invalid_union_discriminator" in conjunction with custom error map.`);
   }
   if (errorMap) return { errorMap: errorMap, description };
   const customMap: ZodErrorMap = (iss, ctx) => {
-    if (iss.code !== 'invalid_type') return { message: ctx.defaultError };
-    if (typeof ctx.data === 'undefined') {
-      return { message: required_error ?? ctx.defaultError };
+    switch (iss.code) {
+      case 'invalid_type':
+        return { message: invalid_type_error ?? ctx.defaultError };
+      case 'invalid_union_discriminator':
+        return { message: invalid_union_discriminator ?? ctx.defaultError };
+      default:
+        return { message: ctx.defaultError };
     }
-    return { message: invalid_type_error ?? ctx.defaultError };
   };
   return { errorMap: customMap, description };
 }
@@ -65,7 +74,7 @@ const getDiscriminator = <T extends ZodTypeAny>(type: T): Primitive[] => {
   } else if (type instanceof ZodEnum) {
     return type.options;
   } else if (type instanceof ZodNativeEnum) {
-    return Object.keys(type.enum as any);
+    return Object.values(type.enum as any);
   } else if (type instanceof ZodDiscriminatedUnion) {
     return getDiscriminator(type._def.innerType);
   } else if (type instanceof ZodDefault) {
