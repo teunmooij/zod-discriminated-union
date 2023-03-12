@@ -1,8 +1,13 @@
+<!-- [![codecov](https://codecov.io/gh/teunmooij/jest-nest/branch/main/graph/badge.svg?token=RD1WJQ36WN)](https://codecov.io/gh/teunmooij/jest-nest) -->
+
+[![snyk](https://snyk.io/test/github/teunmooij/zod.discriminatedunion/badge.svg)](https://snyk.io/test/github/teunmooij/zod.discriminatedunion)
+[![npm version](https://badge.fury.io/js/zod.discriminatedunion.svg)](https://badge.fury.io/js/zod.discriminatedunion)
+
 # zod.discriminatedunion
 
 [Zod](https://zod.dev) DiscriminatedUnion type.
 
-Zod plans to deprecated the very useful `DiscriminatedUnion` type and will not continue improving it with some much-needed enhancements. We will.
+Zod plans to deprecate the very useful `DiscriminatedUnion` type and will not continue improving it with some much-needed enhancements. We will.
 
 ## Installation
 
