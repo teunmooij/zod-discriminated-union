@@ -288,14 +288,17 @@ test('valid - nested disjointed DiscriminatedUnions', () => {
   ]);
 
   const testMaps = [
-    { type: 'baz', subtype: 'able' },
-    { type: 'baz', subtype: 'baker' },
-    { type: 'bauble', subtype: 'beehive', undertype: 'alpha' },
-    { type: 'foo' },
-    { type: 'bar' },
+    { type: 'baz', subtype: 'able' } as const,
+    { type: 'baz', subtype: 'baker' } as const,
+    { type: 'bauble', subtype: 'beehive', undertype: 'alpha' } as const,
+    { type: 'foo' } as const,
+    { type: 'bar' } as const,
   ];
+  type SubSchemaTypes = typeof testMaps extends Array<infer S> ? S : never;
 
   testMaps.map(el => expect(schema.parse(el)).toEqual(el));
+
+  expectShape<SubSchemaTypes>().forSchema(schema);
 });
 
 test('valid expected types from inference with disjointed nested DiscriminatedUnions', () => {
