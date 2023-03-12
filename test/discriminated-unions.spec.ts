@@ -770,7 +770,7 @@ describe('object schema functions', () => {
     expectShape<{ type: 'a'; foo?: { bar?: string; baz?: number } } | { type: 'b'; baz?: string }>().forSchema(deepPartialSchema);
   });
 
-  test.only('partial, without mask, keeps discriminator required', () => {
+  test('partial, without mask, keeps discriminator required', () => {
     const schema = y.discriminatedUnion('type', [
       z.object({ type: z.literal('a'), foo: z.object({ bar: z.string(), baz: z.number() }) }).strip(),
       z.object({ type: z.literal('b'), baz: z.string() }).strip(),
