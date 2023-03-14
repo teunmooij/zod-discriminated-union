@@ -664,7 +664,7 @@ describe('object schema functions', () => {
       | { type: 'c'; sub: 'a'; foo: string }
       | { type: 'c'; sub: 'b'; baz: string }
     >().forSchema(stripSchema);
-    expect(stripSchema.options).toHaveLength(2);
+    expect(stripSchema.options).toHaveLength(3);
     stripSchema.options.forEach(option => {
       if (option instanceof ZodDiscriminatedUnion) {
         expect(option.options).toHaveLength(2);
@@ -700,7 +700,7 @@ describe('object schema functions', () => {
       | { type: 'c'; sub: 'a'; foo: string }
       | { type: 'c'; sub: 'b'; baz: string }
     >().forSchema(passthroughSchema);
-    expect(passthroughSchema.options).toHaveLength(2);
+    expect(passthroughSchema.options).toHaveLength(3);
     passthroughSchema.options.forEach(option => {
       if (option instanceof ZodDiscriminatedUnion) {
         expect(option.options).toHaveLength(2);
