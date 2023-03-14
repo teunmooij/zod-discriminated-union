@@ -130,13 +130,15 @@ export interface ZodDiscriminatedUnionDef<
   typeName: ZodDiscriminatedUnionTypeName;
 }
 
-type KeyofObjectUnion<Options extends ZodDiscriminatedUnionOption<any>[]> = keys<
-  Options[number] extends ZodObject<infer Shape, any, any, any, any>
-    ? Shape
-    : Options[number] extends ZodDiscriminatedUnion<any, infer NestedOptions>
-    ? KeyofObjectUnion<NestedOptions>
-    : never
->;
+type ExtractShapes<Options extends ZodDiscriminatedUnionOption<any>[]> = Options extends [infer First, ...infer Rest]
+  ? First extends ZodObject<infer Shape, any, any, any, any>
+    ? [Shape, ...(Rest extends ZodDiscriminatedUnionOption<any>[] ? ExtractShapes<Rest> : [])]
+    : First extends ZodDiscriminatedUnion<any, infer NestedOptions>
+    ? [...ExtractShapes<NestedOptions>, ...(Rest extends ZodDiscriminatedUnionOption<any>[] ? ExtractShapes<Rest> : [])]
+    : []
+  : [];
+
+type KeyofObjectUnion<Options extends ZodDiscriminatedUnionOption<any>[]> = keys<ExtractShapes<Options>[number]>;
 
 type AsDiscriminatorUnionOptions<T, Discriminator extends string> = T extends ZodDiscriminatedUnionOption<Discriminator>[]
   ? T
@@ -151,7 +153,7 @@ type ZodPickedDiscriminatedUnionOptions<
     [I in keyof Options]: Options[I] extends ZodObject<infer Shape, infer UnknownKeys, infer Catchall, any, any>
       ? ZodObject<Pick<Shape, Extract<keyof Shape, K> | Discriminator>, UnknownKeys, Catchall>
       : Options[I] extends ZodDiscriminatedUnion<infer D, infer O>
-      ? ZodDiscriminatedUnion<D, ZodPickedDiscriminatedUnionOptions<D, O, K>>
+      ? ZodDiscriminatedUnion<D, ZodPickedDiscriminatedUnionOptions<D, O, K | Discriminator>>
       : never;
   },
   Discriminator

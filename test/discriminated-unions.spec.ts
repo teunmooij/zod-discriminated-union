@@ -645,6 +645,10 @@ describe('object schema functions', () => {
     const schema = y.discriminatedUnion('type', [
       z.object({ type: z.literal('a'), foo: z.string() }).strict(),
       z.object({ type: z.literal('b'), baz: z.string() }).strict(),
+      y.discriminatedUnion('sub', [
+        z.object({ type: z.literal('c'), sub: z.literal('a'), foo: z.string() }).passthrough(),
+        z.object({ type: z.literal('c'), sub: z.literal('b'), baz: z.string() }).passthrough(),
+      ]),
     ]);
 
     const stripSchema = schema.strip();
@@ -654,10 +658,22 @@ describe('object schema functions', () => {
 
     expect(output).toEqual({ type: 'a', foo: 'bar' });
 
-    expectShape<{ type: 'a'; foo: string } | { type: 'b'; baz: string }>().forSchema(stripSchema);
+    expectShape<
+      | { type: 'a'; foo: string }
+      | { type: 'b'; baz: string }
+      | { type: 'c'; sub: 'a'; foo: string }
+      | { type: 'c'; sub: 'b'; baz: string }
+    >().forSchema(stripSchema);
     expect(stripSchema.options).toHaveLength(2);
     stripSchema.options.forEach(option => {
-      expect(option._def.unknownKeys).toEqual('strip');
+      if (option instanceof ZodDiscriminatedUnion) {
+        expect(option.options).toHaveLength(2);
+        option.options.forEach(o => {
+          expect(o._def.unknownKeys).toEqual('strip');
+        });
+      } else {
+        expect(option._def.unknownKeys).toEqual('strip');
+      }
     });
   });
 
@@ -665,6 +681,10 @@ describe('object schema functions', () => {
     const schema = y.discriminatedUnion('type', [
       z.object({ type: z.literal('a'), foo: z.string() }).strict(),
       z.object({ type: z.literal('b'), baz: z.string() }).strict(),
+      y.discriminatedUnion('sub', [
+        z.object({ type: z.literal('c'), sub: z.literal('a'), foo: z.string() }).passthrough(),
+        z.object({ type: z.literal('c'), sub: z.literal('b'), baz: z.string() }).passthrough(),
+      ]),
     ]);
 
     const passthroughSchema = schema.passthrough();
@@ -674,10 +694,22 @@ describe('object schema functions', () => {
 
     expect(output).toEqual({ type: 'a', foo: 'bar', test: 123 });
 
-    expectShape<{ type: 'a'; foo: string } | { type: 'b'; baz: string }>().forSchema(passthroughSchema);
+    expectShape<
+      | { type: 'a'; foo: string }
+      | { type: 'b'; baz: string }
+      | { type: 'c'; sub: 'a'; foo: string }
+      | { type: 'c'; sub: 'b'; baz: string }
+    >().forSchema(passthroughSchema);
     expect(passthroughSchema.options).toHaveLength(2);
     passthroughSchema.options.forEach(option => {
-      expect(option._def.unknownKeys).toEqual('passthrough');
+      if (option instanceof ZodDiscriminatedUnion) {
+        expect(option.options).toHaveLength(2);
+        option.options.forEach(o => {
+          expect(o._def.unknownKeys).toEqual('passthrough');
+        });
+      } else {
+        expect(option._def.unknownKeys).toEqual('passthrough');
+      }
     });
   });
 
@@ -685,6 +717,10 @@ describe('object schema functions', () => {
     const schema = y.discriminatedUnion('type', [
       z.object({ type: z.literal('a'), foo: z.string() }).strict(),
       z.object({ type: z.literal('b'), baz: z.string() }).strict(),
+      y.discriminatedUnion('sub', [
+        z.object({ type: z.literal('c'), sub: z.literal('a'), foo: z.string() }).passthrough(),
+        z.object({ type: z.literal('c'), sub: z.literal('b'), baz: z.string() }).passthrough(),
+      ]),
     ]);
 
     const catchallSchema = schema.catchall(z.number());
@@ -694,7 +730,15 @@ describe('object schema functions', () => {
 
     expect(catchallSchema.parse(validInput)).toEqual({ type: 'a', foo: 'bar', test: 123 });
 
-    expectShape<({ type: 'a'; foo: string } | { type: 'b'; baz: string }) & Record<string, number>>().forSchema(catchallSchema);
+    expectShape<
+      (
+        | { type: 'a'; foo: string }
+        | { type: 'b'; baz: string }
+        | { type: 'c'; sub: 'a'; foo: string }
+        | { type: 'c'; sub: 'b'; baz: string }
+      ) &
+        Record<string, number>
+    >().forSchema(catchallSchema);
     expect(catchallSchema.safeParse(invalidInput)).toEqual({
       success: false,
       error: expect.objectContaining({
@@ -714,20 +758,29 @@ describe('object schema functions', () => {
     const schema = y.discriminatedUnion('type', [
       z.object({ type: z.literal('a'), foo: z.string() }).strip(),
       z.object({ type: z.literal('b'), baz: z.string() }).strip(),
+      y.discriminatedUnion('sub', [
+        z.object({ type: z.literal('c'), sub: z.literal('a'), foo: z.string() }).passthrough(),
+        z.object({ type: z.literal('c'), sub: z.literal('b'), baz: z.string() }).passthrough(),
+      ]),
     ]);
 
     const pickSchema = schema.pick({ type: true, foo: true });
-
     expect(pickSchema.parse({ type: 'a', foo: 'bar' })).toEqual({ type: 'a', foo: 'bar' });
     expect(pickSchema.parse({ type: 'b', baz: 'bar' })).toEqual({ type: 'b' });
 
-    expectShape<{ type: 'a'; foo: string } | { type: 'b' }>().forSchema(pickSchema);
+    expectShape<
+      { type: 'a'; foo: string } | { type: 'b' } | { type: 'c'; sub: 'a'; foo: string } | { type: 'c'; sub: 'b' }
+    >().forSchema(pickSchema);
   });
 
   test('pick without discriminator adds discriminator', () => {
     const schema = y.discriminatedUnion('type', [
       z.object({ type: z.literal('a'), foo: z.string() }).strip(),
       z.object({ type: z.literal('b'), baz: z.string() }).strip(),
+      y.discriminatedUnion('sub', [
+        z.object({ type: z.literal('c'), sub: z.literal('a'), foo: z.string() }).passthrough(),
+        z.object({ type: z.literal('c'), sub: z.literal('b'), baz: z.string() }).passthrough(),
+      ]),
     ]);
 
     const pickSchema = schema.pick({ foo: true });
@@ -735,13 +788,19 @@ describe('object schema functions', () => {
     expect(pickSchema.parse({ type: 'a', foo: 'bar' })).toEqual({ type: 'a', foo: 'bar' });
     expect(pickSchema.parse({ type: 'b', baz: 'bar' })).toEqual({ type: 'b' });
 
-    expectShape<{ type: 'a'; foo: string } | { type: 'b' }>().forSchema(pickSchema);
+    expectShape<
+      { type: 'a'; foo: string } | { type: 'b' } | { type: 'c'; sub: 'a'; foo: string } | { type: 'c'; sub: 'b' }
+    >().forSchema(pickSchema);
   });
 
   test('omit without discriminator', () => {
     const schema = y.discriminatedUnion('type', [
       z.object({ type: z.literal('a'), foo: z.string() }).strip(),
       z.object({ type: z.literal('b'), baz: z.string() }).strip(),
+      y.discriminatedUnion('sub', [
+        z.object({ type: z.literal('c'), sub: z.literal('a'), foo: z.string() }).passthrough(),
+        z.object({ type: z.literal('c'), sub: z.literal('b'), baz: z.string() }).passthrough(),
+      ]),
     ]);
 
     const omitSchema = schema.omit({ foo: true });
@@ -749,7 +808,9 @@ describe('object schema functions', () => {
     expect(omitSchema.parse({ type: 'a', foo: 'bar' })).toEqual({ type: 'a' });
     expect(omitSchema.parse({ type: 'b', baz: 'bar' })).toEqual({ type: 'b', baz: 'bar' });
 
-    expectShape<{ type: 'a' } | { type: 'b'; baz: string }>().forSchema(omitSchema);
+    expectShape<
+      { type: 'a' } | { type: 'b'; baz: string } | { type: 'c'; sub: 'a' } | { type: 'c'; sub: 'b'; baz: string }
+    >().forSchema(omitSchema);
   });
 
   test('try to omit discriminator', () => {
