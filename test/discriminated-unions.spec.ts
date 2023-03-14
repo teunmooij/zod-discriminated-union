@@ -522,6 +522,22 @@ test('valid - literals with .default or .preprocess', () => {
   });
 });
 
+test('invalid - nested option missing parent discriminator', () => {
+  expect.assertions(1);
+  try {
+    y.discriminatedUnion('type', [
+      z.object({ type: z.literal('a'), foo: z.string() }).passthrough(),
+      z.object({ type: z.literal('b'), baz: z.string() }).passthrough(),
+      y.discriminatedUnion('sub', [
+        z.object({ type: z.literal('c'), sub: z.literal('a'), foo: z.string() }).passthrough(),
+        z.object({ sub: z.literal('b'), baz: z.string() }).passthrough(),
+      ]),
+    ]);
+  } catch (e: any) {
+    expect(e.message).toEqual('A discriminator value for key `type` could not be extracted from all schema options');
+  }
+});
+
 describe('create params tests', () => {
   it('uses the given errorMap', () => {
     const schema = y.discriminatedUnion(
@@ -737,7 +753,7 @@ describe('object schema functions', () => {
         | { type: 'c'; sub: 'a'; foo: string }
         | { type: 'c'; sub: 'b'; baz: string }
       ) &
-        Record<string, number>
+      Record<string, number>
     >().forSchema(catchallSchema);
     expect(catchallSchema.safeParse(invalidInput)).toEqual({
       success: false,
