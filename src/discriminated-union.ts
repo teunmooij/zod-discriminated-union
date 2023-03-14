@@ -475,7 +475,7 @@ export class ZodDiscriminatedUnion<
             `A discriminator value for key \`${discriminator}\` ` + `could not be extracted from all schema options`,
           );
         }
-        discriminatorValues.map(el => valueSet.add(el));
+        discriminatorValues.forEach(el => valueSet.add(el));
       } else if (type instanceof ZodDiscriminatedUnion) {
         const values = type._enforceParentDiscriminator(discriminator);
         if (values.length < 1) {
@@ -483,7 +483,7 @@ export class ZodDiscriminatedUnion<
             `No value for key \`${discriminator}\` was found for DiscriminatedUnion with discriminator \`${type.discriminator}\``,
           );
         }
-        values.map(el => valueSet.add(el));
+        values.forEach(el => valueSet.add(el));
       }
     }
     const valueArray = Array.from(valueSet);

@@ -646,8 +646,8 @@ describe('object schema functions', () => {
       z.object({ type: z.literal('a'), foo: z.string() }).strict(),
       z.object({ type: z.literal('b'), baz: z.string() }).strict(),
       y.discriminatedUnion('sub', [
-        z.object({ type: z.literal('c'), sub: z.literal('a'), foo: z.string() }).passthrough(),
-        z.object({ type: z.literal('c'), sub: z.literal('b'), baz: z.string() }).passthrough(),
+        z.object({ type: z.literal('c'), sub: z.literal('a'), foo: z.string() }).strict(),
+        z.object({ type: z.literal('c'), sub: z.literal('b'), baz: z.string() }).strict(),
       ]),
     ]);
 
@@ -682,8 +682,8 @@ describe('object schema functions', () => {
       z.object({ type: z.literal('a'), foo: z.string() }).strict(),
       z.object({ type: z.literal('b'), baz: z.string() }).strict(),
       y.discriminatedUnion('sub', [
-        z.object({ type: z.literal('c'), sub: z.literal('a'), foo: z.string() }).passthrough(),
-        z.object({ type: z.literal('c'), sub: z.literal('b'), baz: z.string() }).passthrough(),
+        z.object({ type: z.literal('c'), sub: z.literal('a'), foo: z.string() }).strict(),
+        z.object({ type: z.literal('c'), sub: z.literal('b'), baz: z.string() }).strict(),
       ]),
     ]);
 
@@ -718,8 +718,8 @@ describe('object schema functions', () => {
       z.object({ type: z.literal('a'), foo: z.string() }).strict(),
       z.object({ type: z.literal('b'), baz: z.string() }).strict(),
       y.discriminatedUnion('sub', [
-        z.object({ type: z.literal('c'), sub: z.literal('a'), foo: z.string() }).passthrough(),
-        z.object({ type: z.literal('c'), sub: z.literal('b'), baz: z.string() }).passthrough(),
+        z.object({ type: z.literal('c'), sub: z.literal('a'), foo: z.string() }).strict(),
+        z.object({ type: z.literal('c'), sub: z.literal('b'), baz: z.string() }).strict(),
       ]),
     ]);
 
@@ -759,8 +759,8 @@ describe('object schema functions', () => {
       z.object({ type: z.literal('a'), foo: z.string() }).strip(),
       z.object({ type: z.literal('b'), baz: z.string() }).strip(),
       y.discriminatedUnion('sub', [
-        z.object({ type: z.literal('c'), sub: z.literal('a'), foo: z.string() }).passthrough(),
-        z.object({ type: z.literal('c'), sub: z.literal('b'), baz: z.string() }).passthrough(),
+        z.object({ type: z.literal('c'), sub: z.literal('a'), foo: z.string() }).strip(),
+        z.object({ type: z.literal('c'), sub: z.literal('b'), baz: z.string() }).strip(),
       ]),
     ]);
 
@@ -778,8 +778,8 @@ describe('object schema functions', () => {
       z.object({ type: z.literal('a'), foo: z.string() }).strip(),
       z.object({ type: z.literal('b'), baz: z.string() }).strip(),
       y.discriminatedUnion('sub', [
-        z.object({ type: z.literal('c'), sub: z.literal('a'), foo: z.string() }).passthrough(),
-        z.object({ type: z.literal('c'), sub: z.literal('b'), baz: z.string() }).passthrough(),
+        z.object({ type: z.literal('c'), sub: z.literal('a'), foo: z.string() }).strip(),
+        z.object({ type: z.literal('c'), sub: z.literal('b'), baz: z.string() }).strip(),
       ]),
     ]);
 
@@ -798,8 +798,8 @@ describe('object schema functions', () => {
       z.object({ type: z.literal('a'), foo: z.string() }).strip(),
       z.object({ type: z.literal('b'), baz: z.string() }).strip(),
       y.discriminatedUnion('sub', [
-        z.object({ type: z.literal('c'), sub: z.literal('a'), foo: z.string() }).passthrough(),
-        z.object({ type: z.literal('c'), sub: z.literal('b'), baz: z.string() }).passthrough(),
+        z.object({ type: z.literal('c'), sub: z.literal('a'), foo: z.string() }).strip(),
+        z.object({ type: z.literal('c'), sub: z.literal('b'), baz: z.string() }).strip(),
       ]),
     ]);
 
@@ -817,6 +817,10 @@ describe('object schema functions', () => {
     const schema = y.discriminatedUnion('type', [
       z.object({ type: z.literal('a'), foo: z.string() }).strip(),
       z.object({ type: z.literal('b'), baz: z.string() }).strip(),
+      y.discriminatedUnion('sub', [
+        z.object({ type: z.literal('c'), sub: z.literal('a'), foo: z.string() }).strip(),
+        z.object({ type: z.literal('c'), sub: z.literal('b'), baz: z.string() }).strip(),
+      ]),
     ]);
 
     const omitSchema = schema.omit({ type: true } as any);
@@ -829,6 +833,10 @@ describe('object schema functions', () => {
     const schema = y.discriminatedUnion('type', [
       z.object({ type: z.literal('a'), foo: z.object({ bar: z.string(), baz: z.number() }) }).strip(),
       z.object({ type: z.literal('b'), baz: z.string() }).strip(),
+      y.discriminatedUnion('sub', [
+        z.object({ type: z.literal('c'), sub: z.literal('a'), foo: z.string() }).strip(),
+        z.object({ type: z.literal('c'), sub: z.literal('b'), baz: z.string() }).strip(),
+      ]),
     ]);
 
     const deepPartialSchema = schema.deepPartial();
@@ -844,16 +852,25 @@ describe('object schema functions', () => {
     expect(deepPartialSchema.safeParse({})).toEqual({
       success: false,
       error: expect.objectContaining({
-        issues: [expect.objectContaining({ code: 'invalid_union_discriminator', options: ['a', 'b'] })],
+        issues: [expect.objectContaining({ code: 'invalid_union_discriminator', options: ['a', 'b', 'c'] })],
       }),
     });
-    expectShape<{ type: 'a'; foo?: { bar?: string; baz?: number } } | { type: 'b'; baz?: string }>().forSchema(deepPartialSchema);
+    expectShape<
+      | { type: 'a'; foo?: { bar?: string; baz?: number } }
+      | { type: 'b'; baz?: string }
+      | { type: 'c'; sub: 'a'; foo?: string }
+      | { type: 'c'; sub: 'b'; baz?: string }
+    >().forSchema(deepPartialSchema);
   });
 
   test('partial, without mask, keeps discriminator required', () => {
     const schema = y.discriminatedUnion('type', [
       z.object({ type: z.literal('a'), foo: z.object({ bar: z.string(), baz: z.number() }) }).strip(),
       z.object({ type: z.literal('b'), baz: z.string() }).strip(),
+      y.discriminatedUnion('sub', [
+        z.object({ type: z.literal('c'), sub: z.literal('a'), foo: z.string() }).strip(),
+        z.object({ type: z.literal('c'), sub: z.literal('b'), baz: z.string() }).strip(),
+      ]),
     ]);
 
     const partialSchema = schema.partial();
@@ -877,16 +894,25 @@ describe('object schema functions', () => {
     expect(partialSchema.safeParse({})).toEqual({
       success: false,
       error: expect.objectContaining({
-        issues: [expect.objectContaining({ code: 'invalid_union_discriminator', options: ['a', 'b'] })],
+        issues: [expect.objectContaining({ code: 'invalid_union_discriminator', options: ['a', 'b', 'c'] })],
       }),
     });
-    expectShape<{ type: 'a'; foo?: { bar: string; baz: number } } | { type: 'b'; baz?: string }>().forSchema(partialSchema);
+    expectShape<
+      | { type: 'a'; foo?: { bar: string; baz: number } }
+      | { type: 'b'; baz?: string }
+      | { type: 'c'; sub: 'a'; foo?: string }
+      | { type: 'c'; sub: 'b'; baz?: string }
+    >().forSchema(partialSchema);
   });
 
   test('partial, with mask', () => {
     const schema = y.discriminatedUnion('type', [
       z.object({ type: z.literal('a'), foo: z.string() }).strip(),
       z.object({ type: z.literal('b'), baz: z.string() }).strip(),
+      y.discriminatedUnion('sub', [
+        z.object({ type: z.literal('c'), sub: z.literal('a'), foo: z.string() }).strip(),
+        z.object({ type: z.literal('c'), sub: z.literal('b'), baz: z.string() }).strip(),
+      ]),
     ]);
 
     const partialSchema = schema.partial({ foo: true });
@@ -902,13 +928,22 @@ describe('object schema functions', () => {
       }),
     });
 
-    expectShape<{ type: 'a'; foo?: string } | { type: 'b'; baz: string }>().forSchema(partialSchema);
+    expectShape<
+      | { type: 'a'; foo?: string }
+      | { type: 'b'; baz: string }
+      | { type: 'c'; sub: 'a'; foo?: string }
+      | { type: 'c'; sub: 'b'; baz: string }
+    >().forSchema(partialSchema);
   });
 
   test('partial, with mask including discriminator keeps discriminator required', () => {
     const schema = y.discriminatedUnion('type', [
       z.object({ type: z.literal('a'), foo: z.string() }).strip(),
       z.object({ type: z.literal('b'), baz: z.string() }).strip(),
+      y.discriminatedUnion('sub', [
+        z.object({ type: z.literal('c'), sub: z.literal('a'), foo: z.string() }).strip(),
+        z.object({ type: z.literal('c'), sub: z.literal('b'), baz: z.string() }).strip(),
+      ]),
     ]);
 
     const partialSchema = schema.partial({ type: true, baz: true } as any);
@@ -927,7 +962,7 @@ describe('object schema functions', () => {
     expect(partialSchema.safeParse({})).toEqual({
       success: false,
       error: expect.objectContaining({
-        issues: [expect.objectContaining({ code: 'invalid_union_discriminator', options: ['a', 'b'] })],
+        issues: [expect.objectContaining({ code: 'invalid_union_discriminator', options: ['a', 'b', 'c'] })],
       }),
     });
   });
@@ -936,6 +971,10 @@ describe('object schema functions', () => {
     const schema = y.discriminatedUnion('type', [
       z.object({ type: z.literal('a'), foo: z.object({ bar: z.string().optional() }).optional() }).strip(),
       z.object({ type: z.literal('b'), baz: z.string().optional() }).strip(),
+      y.discriminatedUnion('sub', [
+        z.object({ type: z.literal('c'), sub: z.literal('a'), foo: z.string().optional() }).strip(),
+        z.object({ type: z.literal('c'), sub: z.literal('b'), baz: z.string() }).strip(),
+      ]),
     ]);
 
     const requiredSchema = schema.required();
@@ -954,16 +993,25 @@ describe('object schema functions', () => {
     expect(requiredSchema.safeParse({})).toEqual({
       success: false,
       error: expect.objectContaining({
-        issues: [expect.objectContaining({ code: 'invalid_union_discriminator', options: ['a', 'b'] })],
+        issues: [expect.objectContaining({ code: 'invalid_union_discriminator', options: ['a', 'b', 'c'] })],
       }),
     });
-    expectShape<{ type: 'a'; foo: { bar?: string } } | { type: 'b'; baz: string }>().forSchema(requiredSchema);
+    expectShape<
+      | { type: 'a'; foo: { bar?: string } }
+      | { type: 'b'; baz: string }
+      | { type: 'c'; sub: 'a'; foo: string }
+      | { type: 'c'; sub: 'b'; baz: string }
+    >().forSchema(requiredSchema);
   });
 
   test('required, with a mask', () => {
     const schema = y.discriminatedUnion('type', [
       z.object({ type: z.literal('a'), foo: z.object({ bar: z.string().optional() }).optional() }).strip(),
       z.object({ type: z.literal('b'), baz: z.string().optional() }).strip(),
+      y.discriminatedUnion('sub', [
+        z.object({ type: z.literal('c'), sub: z.literal('a'), foo: z.string().optional() }).strip(),
+        z.object({ type: z.literal('c'), sub: z.literal('b'), baz: z.string().optional() }).strip(),
+      ]),
     ]);
 
     const requiredSchema = schema.required({ foo: true });
@@ -983,9 +1031,14 @@ describe('object schema functions', () => {
     expect(requiredSchema.safeParse({})).toEqual({
       success: false,
       error: expect.objectContaining({
-        issues: [expect.objectContaining({ code: 'invalid_union_discriminator', options: ['a', 'b'] })],
+        issues: [expect.objectContaining({ code: 'invalid_union_discriminator', options: ['a', 'b', 'c'] })],
       }),
     });
-    expectShape<{ type: 'a'; foo: { bar?: string } } | { type: 'b'; baz?: string }>().forSchema(requiredSchema);
+    expectShape<
+      | { type: 'a'; foo: { bar?: string } }
+      | { type: 'b'; baz?: string }
+      | { type: 'c'; sub: 'a'; foo: string }
+      | { type: 'c'; sub: 'b'; baz?: string }
+    >().forSchema(requiredSchema);
   });
 });
