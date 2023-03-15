@@ -1,6 +1,6 @@
 {
   "name": "zod.discriminatedunion",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "DiscriminatedUnion schema for Zod",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -41,7 +41,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/teunmooij/typescript-module-template.git"
+    "url": "git+https://github.com/teunmooij/zod-discriminated-union.git"
   },
   "keywords": [
     "zod",
@@ -53,7 +53,7 @@
   "author": "Teun Mooij",
   "license": "MIT",
   "bugs": {
-    "url": "https://github.com/teunmooij/typescript-module-template/issues"
+    "url": "https://github.com/teunmooij/zod-discriminated-union/issues"
   },
-  "homepage": "https://github.com/teunmooij/typescript-module-template#readme"
+  "homepage": "https://github.com/teunmooij/zod-discriminated-union#readme"
 }
