@@ -1,3 +1,4 @@
+.DS_store
 dist/
 coverage/
 node_modules/
